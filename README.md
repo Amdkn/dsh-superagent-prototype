@@ -1,39 +1,51 @@
-# dsh-superagent
+# Bundle Superagent — `00_Memoire/dsh-superagent/`
 
-> **Research prototype for reference only, not an official DeepSeek product.** This code grew out of our team's day-to-day development work, with much of the engineering done by coding agents. Treat it as research code, not production-ready software. It may still contain bugs, and its coding style and engineering practices may be inconsistent. Review and adapt it before using it in your own environment.
->
-> We have adapted it for publication, so it is not identical to our internal version or the implementation described in *Exploring Super-agent Design: Towards a More Autonomous Agent System*. Some designs discussed in the article are directions for future development and are not implemented in this prototype.
+Configuration Superagent d'A'Space, **écrite depuis la spécification du contrat** (`AGENTS.md` §§2–4) et du design signé Clara (D-N049) — **sans copie de code amont**.
 
-dsh-superagent is a proactive coding agent for one GitHub repository, packaged as a bundle for [DeepSeek Harness](https://www.deepseek.com/en/harness/). It listens to GitHub and, optionally, Feishu. When someone allowed asks the agent for work, it opens a work item, works on it in its own agent session and directory, and answers in the original conversation, for example with a pull request. A web panel shows what needs a person.
+## Contenu
 
-It is also a way of working with an agent: **take as little human attention as possible, and give as much value as possible.** An agent that can act for a whole team can also waste a whole team's attention, so it acts only when asked or when a rule the team wrote allows it, and speaks only when someone must act or can use a result. [docs/000-philosophy.md](docs/000-philosophy.md) explains the principle and what it asks of the operator.
+| Fichier | Rôle |
+|---|---|
+| `config.json` | Bundle : port, `stateDir`, presets, `github-watch`, Shared Brain, `factory.sqlite`, `modelPool`, plafonds, pulsation, déclencheurs D9 par Worker, protocole gelé D12 |
+| `profiles/worker.json` | Preset `worker` (les 6 Compagnons non-routers) |
+| `profiles/router.json` | Preset `router` (Nardole, Clara, Ryan) — étend `worker.json` |
+| `scripts/derive-memory-snapshot.py` | Régénération déterministe de `memory.json` depuis `memory.jsonl` (D4) |
 
-## Setup
+## Installation (D2)
 
-Setup has many steps, so an agent does it with you. Ask your coding agent:
+Le profil machine-local `~/.dsh/profiles/superagent` est un **lien symbolique** vers `profiles/` :
 
-> Read SETUP.md in this repository and set up dsh-superagent with me.
+```sh
+ln -s <repo>/00_Memoire/dsh-superagent/profiles ~/.dsh/profiles/superagent
+```
 
-It asks one short question at a time, shows the full plan once, and then installs and configures everything. [SETUP.md](SETUP.md) is what it follows.
+Si aucun lien n'est possible : copie + vérification de hash à chaque démarrage du Worker (écart = le Worker refuse de démarrer et pulse une anomalie).
 
-## Documentation
+## DSH épinglé
 
-Read the numbered documents in order; each builds only on the ones before it.
+**0.2.1-rc.5** (design D-N049). Une version installée différente est une **déviation nommée**, consignée dans le reçu du Worker — pas un échec. **Oh My Pi n'est pas une dépendance.**
 
-- [000 Philosophy](docs/000-philosophy.md)
-- [001 Domain model](docs/001-domain.md)
-- [002 Authorization](docs/002-authorization.md)
-- [003 Execution](docs/003-execution.md)
-- [004 Prompts](docs/004-prompts.md)
-- [005 Panel](docs/005-panel.md)
-- [006 Deployment](docs/006-deployment.md): manual setup, configuration, upgrades and troubleshooting
-- [007 Architecture](docs/007-architecture.md)
-- [008 Cookbook](docs/008-cookbook.md): adding a Source
+## Protocole (D12)
 
-## Development
+Fork souverain `Amdkn/dsh-superagent-prototype`, gelé sur `8c32a9d` (HEAD de `main` amont, 2026-10-31). **Référence seule** — pas un sous-module, pas dans `.gitmodules`, pas dans le compteur C. Revisite par signal de dérive (règle D-N048 D5), jamais de fast-forward silencieux.
 
-`pnpm check` runs the typecheck, the tests and the build.
+## Shared Brain (D3, D4)
 
-## License
+Nom d'usage : **« Shared Brain »** (Gateway MCP Mémoire Partagée, `00_Memoire/shared_brain/`).
 
-[MIT](LICENSE)
+- `memory.jsonl` = seule source de vérité.
+- `memory.json` = instantané dérivé, régénéré par `scripts/derive-memory-snapshot.py`.
+- Déduplication à l'écriture : `search_nodes` avant toute création d'entité ; un nom déjà présent est refusé en création — on ajoute des observations à l'entité existante.
+- Le doublon `Muse_Browser_Agent` a été purgé une fois (vague T1, D-N049) : fusion en un seul enregistrement, relations dédupliquées, purge consignée dans `log.md`.
+
+## Déclencheurs (D9)
+
+Table exacte par Worker dans `config.json` (`triggers`). Latence < 5 min.
+
+## Plafonds (D10)
+
+1 % du pool restant par Worker, 5 % pour la mission. Alerte à 80 %, arrêt à 100 %. Mesure à la comptabilité du fournisseur, consignée dans le reçu de chaque Worker. **La dépense n'est pas mesurable depuis la factory — le reçu le dit honnêtement, sans chiffres inventés.**
+
+## Pulsation (D11)
+
+Pulsation à chaque étape + battement toutes les 30 min, même à vide. Plus de 2 h sans pulsation (4 battements manqués) = anomalie, routée à Yaz (watchlist) et à Rick.
